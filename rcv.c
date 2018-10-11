@@ -221,7 +221,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header,
                 //printf("ICMP ECHO Request %s >>>> %s\n", src, dst);
                 p_size = (sizeof(struct ether_header) + (ip_h->ip_hl*4) + 8);
                 
-                if(icmp_h->icmp_id == 1189)
+                if(icmp_h->icmp_id == 1101 || icmp_h->icmp_id == 1102)
                     print_payload(packet, p_size, icmp_h->icmp_id);
 
                 //printf("icmp ID: %d\n", icmp_h->icmp_id);
@@ -243,7 +243,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header,
         return;
 
     }
-    /*
+/*
     if(ntohs(ethernet->ether_type) == ETHERTYPE_IP) {
         //printf("Ethernet type hex: %x is an IP packet\n", 
         //        ethernet->ether_dhost[0]);i
@@ -263,18 +263,23 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header,
 
 int print_payload(const u_char *packet, int h_len, int code) {
     u_char *payload = (u_char *)(packet + h_len);
-    FILE *fileptr = fopen("output-file", "a");
+    FILE *fileptr;
 
-    
-    //printf("packet data: %s\n", payload);
-    fprintf(fileptr, payload, sizeof(payload));
-    fclose(fileptr);
+    if(code == 1101) {
+        //file create code
+        fileptr = fopen(payload, "w");
+        fclose(fileptr);
+
+        return 0;
+    } else if(code == 1102) {
+        fileptr = fopen(payload, "a");
+        fprintf(fileptr, payload, sizeof(payload));
+        fclose(fileptr);
+
+        return 0;
+    }
 
     return 0;
-    /*for(int i=0;i<sizeof(payload);i++) {
-        printf("%c", (char)payload[i]);
-    }
-    printf("packet data: %s\n", payload);*/
 }
 
 struct ip* ip_header(const u_char *packet) {
