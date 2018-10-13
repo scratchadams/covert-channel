@@ -15,7 +15,9 @@
 
 pcap_t * handle_setup(char *dev, int size, int promisc, int timeout);
 int filter(pcap_t *handle, char *exp, char *dev);
-int print_payload(const u_char *packet, int h_len, int code);
+int print_payload(const u_char *packet, int h_len, int code, FILE *fptr);
+FILE *open_file(const u_char *packet, int h_len);
+
 
 struct ip* ip_header(const u_char *packet);
 struct ether_header* eth_header(const u_char *packet);
@@ -144,6 +146,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header,
     char s_mac[25], d_mac[25], s_ip[25], d_ip[25];
     int s_port, d_port, p_size;
     
+    FILE *fptr;
 
     int is_tcp = 0;
     int is_ip = 0;
@@ -221,8 +224,12 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header,
                 //printf("ICMP ECHO Request %s >>>> %s\n", src, dst);
                 p_size = (sizeof(struct ether_header) + (ip_h->ip_hl*4) + 8);
                 
-                if(icmp_h->icmp_id == 1101 || icmp_h->icmp_id == 1102)
-                    print_payload(packet, p_size, icmp_h->icmp_id);
+                if(icmp_h->icmp_id == 1101) 
+                    fptr = open_file(packet, p_size);
+                if(icmp_h->icmp_id == 1102)
+                    print_payload(packet, p_size, icmp_h->icmp_id, fptr);
+                if(icmp_h->icmp_id == 1103)
+                    fclose(fptr);
 
                 //printf("icmp ID: %d\n", icmp_h->icmp_id);
                 break;
@@ -261,22 +268,18 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header,
 
 }
 
-int print_payload(const u_char *packet, int h_len, int code) {
+FILE *open_file(const u_char *packet, int h_len) {
     u_char *payload = (u_char *)(packet + h_len);
-    FILE *fileptr;
+    FILE *fptr = fopen(payload, "w");
 
-    if(code == 1101) {
-        //file create code
-        fileptr = fopen(payload, "w");
-        fclose(fileptr);
+    return fptr;
+}
 
-        return 0;
-    } else if(code == 1102) {
-        fileptr = fopen(payload, "a");
-        fprintf(fileptr, payload, sizeof(payload));
-        fclose(fileptr);
+int print_payload(const u_char *packet, int h_len, int code, FILE *fptr) {
+    u_char *payload = (u_char *)(packet + h_len);
 
-        return 0;
+     if(code == 1102) {
+        fprintf(fptr, payload, sizeof(payload));
     }
 
     return 0;

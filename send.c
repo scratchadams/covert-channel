@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
     
     covert_icmp(dst, "filetest.c", 1101);
     covert_icmp(dst, data, 1102);
+    covert_icmp(dst, "abcdefghij", 1103);
     return 0;
 }
 
