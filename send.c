@@ -62,7 +62,7 @@ int covert_dns(struct in_addr *dst, char *data, int code) {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr = *dst;
-    addr.sin_port = 53;
+    addr.sin_port = htons(53);
 
     memset(&dns_hdr, 0, sizeof(dns_hdr));
     dns_hdr.aa = 1;
