@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
 
 int covert_dns(struct in_addr *dst, char *data, int code) {
-    struct dnshdr dns_hdr;
+    struct dnshdr_k dns_hdr;
     struct sockaddr_in addr;
 
     unsigned char packet[2048];
@@ -65,10 +65,24 @@ int covert_dns(struct in_addr *dst, char *data, int code) {
     addr.sin_port = htons(53);
 
     memset(&dns_hdr, 0, sizeof(dns_hdr));
-    dns_hdr.aa = 1;
+    dns_hdr.t_id = htons(0x2050);
+    //dns_hdr.flags = htons(0x2565);
+    dns_hdr.cd = 1;
+    dns_hdr.ad = 0;
+    dns_hdr.z = 0;
+    dns_hdr.ra = 0;
+    dns_hdr.rd = 0;
+    dns_hdr.tc = 0;
+    dns_hdr.aa = 0;
+    dns_hdr.opcode = 2;
+    dns_hdr.qr = 0;
+    dns_hdr.rcode = 0;
+    //printf("dns header size: %x\n", dns_hdr);
 
     memcpy(packet, &dns_hdr, sizeof(dns_hdr));
     memcpy(packet + sizeof(dns_hdr), "testing", 7);
+
+    printf("packet: %x\n", packet);
 
     if((ch = sendto(sock, packet, sizeof(dns_hdr)+7, 0,
                 (struct sockaddr*)&addr, sizeof(addr))) <=0) {
